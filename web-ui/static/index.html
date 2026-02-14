@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nyraa AI – Face & Skin Analysis</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Nyraa AI</h1>
+      <p class="tagline">Face &amp; Skin Analysis</p>
+      <p class="intro">Upload a clear, front-facing photo. We analyze skin type and condition, face shape, and suggest personalised salon services and products. Results are for guidance only; a professional consultation is recommended.</p>
+    </header>
+
+    <main>
+      <section class="upload-section">
+        <label class="file-label" for="file">Choose a face image</label>
+        <input type="file" id="file" accept="image/*" />
+        <button type="button" id="analyze" disabled>Analyze</button>
+      </section>
+
+      <section id="preview" class="preview hidden">
+        <h2>Preview</h2>
+        <div class="preview-wrap">
+          <img id="preview-img" alt="Preview" />
+          <canvas id="landmarks-canvas" class="landmarks-canvas" aria-hidden="true"></canvas>
+        </div>
+        <p class="landmarks-legend hidden" id="landmarks-legend">Dots: face mesh. Highlighted: points used for face shape (jaw width, face height).</p>
+      </section>
+
+      <section id="loading" class="loading hidden">
+        <p>Analyzing…</p>
+      </section>
+
+      <section id="error" class="error hidden">
+        <h2>Error</h2>
+        <pre id="error-message"></pre>
+      </section>
+
+      <section id="results" class="results hidden">
+        <h2>Your analysis</h2>
+        <div class="result-grid">
+          <div class="card">
+            <h3>Skin</h3>
+            <p><strong>Type:</strong> <span id="skin-type"></span></p>
+            <p class="description" id="skin-type-desc"></p>
+            <p><strong>Acne level:</strong> <span id="acne-level"></span></p>
+            <p class="description" id="acne-level-desc"></p>
+          </div>
+          <div class="card">
+            <h3>Face shape</h3>
+            <p><strong>Shape:</strong> <span id="face-shape"></span></p>
+            <p class="description" id="face-shape-desc"></p>
+          </div>
+          <div class="card">
+            <h3>Recommendations</h3>
+            <p><strong>Services we suggest</strong></p>
+            <ul id="services-list" class="rec-list"></ul>
+            <p><strong>Products we suggest</strong></p>
+            <ul id="products-list" class="rec-list"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Results are for guidance only. Nyraa AI is not a substitute for professional skin or hair advice.</p>
+    </footer>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    container_name: nyraa-api-gateway
+    ports:
+      - "9000:8000"
+    depends_on:
+      - face-service
+      - skin-service
+      - shape-service
+      - recommendation-service
+      - db
+    environment:
+      - FACE_SERVICE_URL=http://face-service:8001/detect-face
+      - SKIN_SERVICE_URL=http://skin-service:8002/analyze-skin
+      - SHAPE_SERVICE_URL=http://shape-service:8003/detect-shape
+      - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8004/recommend
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=nyraa_ai
+      - DB_USER=nyraa
+      - DB_PASSWORD=nyraa123
+    networks:
+      - nyraa-network
+
+  web-ui:
+    build: ./web-ui
+    container_name: nyraa-web-ui
+    ports:
+      - "9001:9001"
+    depends_on:
+      - api-gateway
+    environment:
+      - API_GATEWAY_URL=http://api-gateway:8000
+    networks:
+      - nyraa-network
+
+  face-service:
+    build: ./face-service
+    container_name: nyraa-face-service
+    networks:
+      - nyraa-network
+
+  skin-service:
+    build: ./skin-service
+    container_name: nyraa-skin-service
+    networks:
+      - nyraa-network
+
+  shape-service:
+    build: ./shape-service
+    container_name: nyraa-shape-service
+    networks:
+      - nyraa-network
+
+  recommendation-service:
+    build: ./recommendation-service
+    container_name: nyraa-recommendation-service
+    networks:
+      - nyraa-network
+
+  db:
+    image: postgres:15
+    container_name: nyraa-db
+    environment:
+      - POSTGRES_USER=nyraa
+      - POSTGRES_PASSWORD=nyraa123
+      - POSTGRES_DB=nyraa_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - nyraa_db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - nyraa-network
+
+networks:
+  nyraa-network:
+    driver: bridge
+
+volumes:
+  nyraa_db_data:
+    driver: local
+
