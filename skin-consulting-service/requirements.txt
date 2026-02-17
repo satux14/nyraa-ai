@@ -1,9 +1,6 @@
 fastapi
 uvicorn[standard]
-httpx
-asyncpg
 python-multipart
 numpy
 opencv-python-headless
-PyJWT
-
+mediapipe

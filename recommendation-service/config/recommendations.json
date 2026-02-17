@@ -1,0 +1,61 @@
+{
+  "rules": [
+    {
+      "conditions": {
+        "skin_type": "Oily",
+        "acne_level": ["Moderate", "High"]
+      },
+      "services": ["Acne Control Facial"],
+      "products": ["Salicylic Cleanser"]
+    },
+    {
+      "conditions": {
+        "skin_type": "Dry"
+      },
+      "services": ["Hydrating Facial"],
+      "products": ["Vitamin C Serum"]
+    },
+    {
+      "conditions": {
+        "dark_circle_score": ["Moderate", "High"]
+      },
+      "services": ["Under-Eye Brightening Treatment"],
+      "products": ["Caffeine Eye Serum"]
+    },
+    {
+      "conditions": {
+        "face_shape": "Round"
+      },
+      "services": ["Layer Cut"],
+      "products": []
+    },
+    {
+      "conditions": {
+        "face_shape": "Square"
+      },
+      "services": ["Soft Curl Styling"],
+      "products": []
+    },
+    {
+      "conditions": {
+        "face_shape": "Oblong"
+      },
+      "services": ["Soft Layers / Side-Swept Styling"],
+      "products": []
+    },
+    {
+      "conditions": {
+        "face_shape": "Heart"
+      },
+      "services": ["Chin-Length or Layered Cut"],
+      "products": []
+    },
+    {
+      "conditions": {
+        "face_shape": "Diamond"
+      },
+      "services": ["Styles to Add Width at Forehead or Chin"],
+      "products": []
+    }
+  ]
+}

@@ -3,21 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nyraa AI – Face & Skin Analysis</title>
+  <title>NYRAA AI – Face & Skin Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Nyraa AI</h1>
+      <h1 class="brand-heading"><span class="brand-name">NYRAA</span> <span class="brand-ai">AI</span></h1>
       <p class="tagline">Face &amp; Skin Analysis</p>
-      <p class="intro">Upload a clear, front-facing photo. We analyze skin type and condition, face shape, and suggest personalised salon services and products. Results are for guidance only; a professional consultation is recommended.</p>
     </header>
 
-    <main>
+    <section id="login-section" class="login-section">
+      <p class="intro">Sign in to use face and skin analysis.</p>
+      <div class="login-actions">
+        <button type="button" id="guest-btn" class="btn btn-guest">Continue as Guest</button>
+        <div class="login-divider">or</div>
+        <div class="admin-login">
+          <h3>Admin login</h3>
+          <label for="admin-user">Username</label>
+          <input type="text" id="admin-user" placeholder="Username" autocomplete="username" />
+          <label for="admin-password">Password</label>
+          <input type="password" id="admin-password" placeholder="Password" autocomplete="current-password" />
+          <button type="button" id="admin-login-btn" class="btn btn-admin">Log in</button>
+          <p id="login-error" class="login-error hidden"></p>
+        </div>
+      </div>
+    </section>
+
+    <main id="app-section" class="hidden">
+      <p class="intro">Upload a clear, front-facing photo. We analyze skin type and condition, face shape, and suggest personalised salon services and products. Results are for guidance only; a professional consultation is recommended.</p>
+      <div class="app-bar">
+        <span id="user-badge" class="user-badge"></span>
+        <button type="button" id="logout-btn" class="btn btn-logout">Log out</button>
+        <a href="#admin" id="view-all-link" class="hidden">View all data</a>
+      </div>
       <section class="upload-section">
         <label class="file-label" for="file">Choose a face image</label>
         <input type="file" id="file" accept="image/*" />
+        <div id="admin-customer-row" class="admin-customer-row hidden">
+          <label for="customer-name">Customer name</label>
+          <input type="text" id="customer-name" placeholder="GENERAL or custom name" value="GENERAL" />
+        </div>
         <button type="button" id="analyze" disabled>Analyze</button>
       </section>
 
@@ -27,7 +56,7 @@
           <img id="preview-img" alt="Preview" />
           <canvas id="landmarks-canvas" class="landmarks-canvas" aria-hidden="true"></canvas>
         </div>
-        <p class="landmarks-legend hidden" id="landmarks-legend">Dots: face mesh. Highlighted: points used for face shape (jaw width, face height).</p>
+        <p class="landmarks-legend hidden" id="landmarks-legend"></p>
       </section>
 
       <section id="loading" class="loading hidden">
@@ -41,19 +70,66 @@
 
       <section id="results" class="results hidden">
         <h2>Your analysis</h2>
-        <div class="result-grid">
+        <div class="preview-wrap results-preview">
+          <img id="results-preview-img" alt="Analysis" />
+          <canvas id="results-landmarks-canvas" class="landmarks-canvas" aria-hidden="true"></canvas>
+        </div>
+        <p class="landmarks-legend" id="results-landmarks-legend"></p>
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab="original">Original</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="all">All</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="skin">Skin</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="shape">Shape</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="recommendations">Recommendations</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="skinconsult">Skin consult</button>
+        </div>
+        <div id="tab-panel-original" class="tab-panel active" role="tabpanel">
+          <p class="tab-note">Your photo with no overlay.</p>
+        </div>
+        <div id="tab-panel-all" class="tab-panel" role="tabpanel" hidden>
+          <div class="result-grid all-in-one">
+            <div class="card">
+              <h3>Skin</h3>
+              <p><strong>Type:</strong> <span id="all-skin-type"></span></p>
+              <p class="description" id="all-skin-type-desc"></p>
+              <p><strong>Acne level:</strong> <span id="all-acne-level"></span></p>
+              <p class="description" id="all-acne-level-desc"></p>
+              <p><strong>Dark circles:</strong> <span id="all-dark-circle-score"></span></p>
+              <p class="description" id="all-dark-circle-desc"></p>
+            </div>
+            <div class="card">
+              <h3>Face shape</h3>
+              <p><strong>Shape:</strong> <span id="all-face-shape"></span></p>
+              <p class="description" id="all-face-shape-desc"></p>
+            </div>
+            <div class="card">
+              <h3>Recommendations</h3>
+              <p><strong>Services we suggest</strong></p>
+              <ul id="all-services-list" class="rec-list"></ul>
+              <p><strong>Products we suggest</strong></p>
+              <ul id="all-products-list" class="rec-list"></ul>
+            </div>
+          </div>
+        </div>
+        <div id="tab-panel-skin" class="tab-panel" role="tabpanel" hidden>
           <div class="card">
             <h3>Skin</h3>
             <p><strong>Type:</strong> <span id="skin-type"></span></p>
             <p class="description" id="skin-type-desc"></p>
             <p><strong>Acne level:</strong> <span id="acne-level"></span></p>
             <p class="description" id="acne-level-desc"></p>
+            <p><strong>Dark circles:</strong> <span id="dark-circle-score"></span></p>
+            <p class="description" id="dark-circle-desc"></p>
           </div>
+        </div>
+        <div id="tab-panel-shape" class="tab-panel" role="tabpanel" hidden>
           <div class="card">
             <h3>Face shape</h3>
             <p><strong>Shape:</strong> <span id="face-shape"></span></p>
             <p class="description" id="face-shape-desc"></p>
           </div>
+        </div>
+        <div id="tab-panel-recommendations" class="tab-panel" role="tabpanel" hidden>
           <div class="card">
             <h3>Recommendations</h3>
             <p><strong>Services we suggest</strong></p>
@@ -62,11 +138,130 @@
             <ul id="products-list" class="rec-list"></ul>
           </div>
         </div>
+        <div id="tab-panel-skinconsult" class="tab-panel" role="tabpanel" hidden>
+          <div id="skinconsult-loading" class="skinconsult-loading hidden">Loading skin consultation…</div>
+          <div id="skinconsult-unavailable" class="card hidden">
+            <p>Skin consultation is not available for this image. Ensure the skin-consulting service is running.</p>
+          </div>
+          <div id="skinconsult-content" class="skinconsult-content hidden">
+            <div class="card">
+              <h3>Confidence</h3>
+              <p><strong>Score:</strong> <span id="sc-confidence"></span></p>
+              <p id="sc-manual-review" class="sc-warning hidden">Manual review recommended (low confidence).</p>
+            </div>
+            <div class="card">
+              <h3>Skin scores (0–100)</h3>
+              <p><strong>Brightness:</strong> <span id="sc-brightness"></span></p>
+              <p><strong>Pigmentation density:</strong> <span id="sc-pigmentation"></span></p>
+              <p><strong>Redness:</strong> <span id="sc-redness"></span></p>
+              <p><strong>Texture roughness:</strong> <span id="sc-texture"></span></p>
+              <p><strong>Dark circle index:</strong> <span id="sc-darkcircle"></span></p>
+              <p><strong>Facial hair density:</strong> <span id="sc-facialhair"></span></p>
+            </div>
+            <div class="card">
+              <h3>Top recommended services</h3>
+              <ul id="sc-top-services" class="rec-list"></ul>
+            </div>
+            <div class="card">
+              <h3>Suggested roadmap</h3>
+              <p id="sc-roadmap"></p>
+            </div>
+            <div class="card">
+              <h3>Improvement projection</h3>
+              <p id="sc-projection" class="sc-projection"></p>
+            </div>
+            <div class="card">
+              <h3>Before / After (simulation)</h3>
+              <div class="sc-images">
+                <figure><img id="sc-before-img" alt="Before" /><figcaption>Before</figcaption></figure>
+                <figure><img id="sc-after-img" alt="After" /><figcaption>After</figcaption></figure>
+              </div>
+              <p id="sc-disclaimer" class="sc-disclaimer"></p>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
+    <section id="admin-view" class="admin-view hidden">
+      <p class="admin-top-actions"><a href="#" id="admin-back-link-top">Back to analysis</a></p>
+      <h2>All analyses (admin)</h2>
+      <p id="admin-loading" class="admin-loading">Loading…</p>
+      <div id="admin-table-wrap" class="admin-table-wrap hidden">
+        <p class="admin-delete-actions">
+          <button type="button" id="admin-delete-selected" class="btn btn-delete" disabled>Delete selected</button>
+          <span id="admin-delete-status" class="admin-delete-status"></span>
+        </p>
+        <table id="admin-table" class="admin-table">
+          <thead>
+            <tr>
+              <th class="admin-col-checkbox"><label><input type="checkbox" id="admin-select-all" aria-label="Select all" /></label></th>
+              <th>Photo</th>
+              <th>Date (IST)</th>
+              <th>User</th>
+              <th>Customer</th>
+              <th>Skin</th>
+              <th>Shape</th>
+              <th>Dark circle</th>
+              <th>Services</th>
+              <th>Products</th>
+              <th>View result</th>
+            </tr>
+          </thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+      <div id="admin-detail" class="admin-detail hidden">
+        <p class="admin-detail-top-actions"><a href="#" id="admin-back-link-detail">Back to analysis</a> · <button type="button" id="admin-detail-back-top" class="btn-link">Back to list</button></p>
+        <h2>Analysis result</h2>
+        <div class="preview-wrap results-preview">
+          <img id="admin-detail-img" alt="Analysis photo" />
+          <canvas id="admin-landmarks-canvas" class="landmarks-canvas" aria-hidden="true"></canvas>
+        </div>
+        <p class="landmarks-legend" id="admin-landmarks-legend"></p>
+        <div class="tabs admin-detail-tabs" role="tablist">
+          <button type="button" class="tab-btn admin-tab active" data-admin-tab="skin">Skin</button>
+          <button type="button" class="tab-btn admin-tab" data-admin-tab="shape">Shape</button>
+          <button type="button" class="tab-btn admin-tab" data-admin-tab="recommendations">Recommendations</button>
+          <button type="button" class="tab-btn admin-tab" data-admin-tab="skinconsult">Skin consult</button>
+        </div>
+        <div id="admin-panel-skin" class="tab-panel admin-panel active" role="tabpanel">
+          <div class="card">
+            <h3>Skin</h3>
+            <p><strong>Type:</strong> <span id="admin-skin-type"></span></p>
+            <p class="description" id="admin-skin-type-desc"></p>
+            <p><strong>Acne level:</strong> <span id="admin-acne-level"></span></p>
+            <p class="description" id="admin-acne-level-desc"></p>
+            <p><strong>Dark circles:</strong> <span id="admin-dark-circle-score"></span></p>
+            <p class="description" id="admin-dark-circle-desc"></p>
+          </div>
+        </div>
+        <div id="admin-panel-shape" class="tab-panel admin-panel" role="tabpanel" hidden>
+          <div class="card">
+            <h3>Face shape</h3>
+            <p><strong>Shape:</strong> <span id="admin-face-shape"></span></p>
+            <p class="description" id="admin-face-shape-desc"></p>
+          </div>
+        </div>
+        <div id="admin-panel-recommendations" class="tab-panel admin-panel" role="tabpanel" hidden>
+          <div class="card">
+            <h3>Recommendations</h3>
+            <p><strong>Services we suggest</strong></p>
+            <ul id="admin-services-list" class="rec-list"></ul>
+            <p><strong>Products we suggest</strong></p>
+            <ul id="admin-products-list" class="rec-list"></ul>
+          </div>
+        </div>
+        <div id="admin-panel-skinconsult" class="tab-panel admin-panel" role="tabpanel" hidden>
+          <div id="admin-skinconsult-content" class="card"></div>
+        </div>
+        <p><button type="button" id="admin-detail-back" class="btn btn-logout">Back to list</button></p>
+      </div>
+      <p><a href="#" id="admin-back-link">Back to analysis</a></p>
+    </section>
+
     <footer>
-      <p>Results are for guidance only. Nyraa AI is not a substitute for professional skin or hair advice.</p>
+      <p>Results are for guidance only. NYRAA AI is not a substitute for professional skin or hair advice.</p>
     </footer>
   </div>
   <script src="/static/app.js"></script>

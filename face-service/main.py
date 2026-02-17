@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import mediapipe as mp
 
-app = FastAPI(title="Nyraa Face Service", version="1.0.0")
+app = FastAPI(title="NYRAA AI Face Service", version="1.0.0")
 
 mp_face = mp.solutions.face_mesh
 face_mesh = mp_face.FaceMesh(static_image_mode=True)

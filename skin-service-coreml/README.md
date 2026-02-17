@@ -1,4 +1,4 @@
-# Nyraa AI – Skin Service (CoreML / GPU Path)
+# NYRAA AI – Skin Service (CoreML / GPU Path)
 
 This folder is reserved for a future GPU-accelerated skin analysis service running **natively on macOS** (outside Docker) on the Mac mini.
 

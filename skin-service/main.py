@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import tensorflow as tf
 
-app = FastAPI(title="Nyraa Skin Service", version="1.0.0")
+app = FastAPI(title="NYRAA AI Skin Service", version="1.0.0")
 
 model = tf.keras.applications.MobileNetV2(
     weights="imagenet",

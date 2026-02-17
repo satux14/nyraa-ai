@@ -1,6 +1,6 @@
-# Nyraa AI – Face & Skin Analysis (Microservices)
+# NYRAA AI – Face & Skin Analysis (Microservices)
 
-This project implements the Nyraa AI Face & Skin Analysis system as a set of Python/FastAPI microservices orchestrated with Docker Compose.
+This project implements the NYRAA AI Face & Skin Analysis system as a set of Python/FastAPI microservices orchestrated with Docker Compose.
 
 ## Services
 
@@ -10,6 +10,7 @@ This project implements the Nyraa AI Face & Skin Analysis system as a set of Pyt
 - `skin-service` – TensorFlow MobileNetV2-based skin analysis.
 - `shape-service` – Landmark geometry-based face shape detection.
 - `recommendation-service` – Rule-based mapping from analysis to salon services and products.
+- `skin-consulting-service` – Deep skin analysis (6 metrics), staff/customer consult endpoints, simulation; port 8005.
 - `db` – PostgreSQL 15 for analysis logs.
 
 ## Running Locally (CPU-only, Mac mini or dev machine)

@@ -6,22 +6,30 @@ services:
     container_name: nyraa-api-gateway
     ports:
       - "9000:8000"
+    volumes:
+      - ./uploads:/app/uploads
     depends_on:
       - face-service
       - skin-service
       - shape-service
       - recommendation-service
+      - skin-consulting-service
       - db
     environment:
+      - UPLOAD_DIR=/app/uploads
       - FACE_SERVICE_URL=http://face-service:8001/detect-face
       - SKIN_SERVICE_URL=http://skin-service:8002/analyze-skin
       - SHAPE_SERVICE_URL=http://shape-service:8003/detect-shape
       - RECOMMENDATION_SERVICE_URL=http://recommendation-service:8004/recommend
+      - SKIN_CONSULTING_SERVICE_URL=http://skin-consulting-service:8005
       - DB_HOST=db
       - DB_PORT=5432
       - DB_NAME=nyraa_ai
       - DB_USER=nyraa
       - DB_PASSWORD=nyraa123
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=admin
+      - JWT_SECRET=change-me-in-production
     networks:
       - nyraa-network
 
@@ -33,7 +41,8 @@ services:
     depends_on:
       - api-gateway
     environment:
-      - API_GATEWAY_URL=http://api-gateway:8000
+      # Reach gateway via host port so we don't depend on api-gateway hostname resolving from web-ui.
+      - API_GATEWAY_URL=http://host.docker.internal:9000
     networks:
       - nyraa-network
 
@@ -58,6 +67,14 @@ services:
   recommendation-service:
     build: ./recommendation-service
     container_name: nyraa-recommendation-service
+    networks:
+      - nyraa-network
+
+  skin-consulting-service:
+    build: ./skin-consulting-service
+    container_name: nyraa-skin-consulting-service
+    ports:
+      - "8005:8005"
     networks:
       - nyraa-network
 
