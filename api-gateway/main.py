@@ -494,6 +494,32 @@ async def admin_delete_analyses(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/admin/audit/logs")
+async def get_audit_logs_endpoint(
+    current_user: Dict[str, Any] = Depends(get_admin_user),
+    action: Optional[str] = None,
+    resource_type: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """Query audit logs with optional filters (admin only)."""
+    return audit_logger.get_audit_logs(
+        action=action,
+        resource_type=resource_type,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@app.get("/admin/audit/stats")
+async def get_audit_stats_endpoint(
+    current_user: Dict[str, Any] = Depends(get_admin_user),
+    period: str = "today",
+):
+    """Get audit statistics for a period (admin only)."""
+    return audit_logger.get_audit_stats(period=period)
+
+
 @app.post("/consult")
 async def consult(file: UploadFile = File(...), current_user: Dict[str, Any] = Depends(get_current_user)):
     """Forward to skin-consulting-service: staff + customer results."""

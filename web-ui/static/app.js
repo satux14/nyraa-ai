@@ -35,6 +35,8 @@
     var adminCustomerRow = document.getElementById('admin-customer-row');
     if (viewAllLink) viewAllLink.classList.toggle('hidden', role !== 'admin');
     if (adminCustomerRow) adminCustomerRow.classList.toggle('hidden', role !== 'admin');
+    var auditLink = document.getElementById('audit-link');
+    if (auditLink) auditLink.classList.toggle('hidden', role !== 'admin');
   }
 
   function showAdminView() {

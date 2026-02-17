@@ -154,6 +154,50 @@ async def admin_delete_analyses(request: Request, authorization: str = Header(No
     return resp.json()
 
 
+@app.get("/admin/audit")
+async def audit_page():
+    """Serve the audit logs & statistics page."""
+    audit_file = STATIC_DIR / "audit.html"
+    if not audit_file.exists():
+        raise HTTPException(status_code=404, detail="audit.html not found")
+    return FileResponse(audit_file)
+
+
+@app.get("/api/admin/audit/logs")
+async def admin_audit_logs(authorization: str = Header(None), action: str = None, resource_type: str = None, limit: int = 100, offset: int = 0):
+    """Proxy to gateway GET /admin/audit/logs."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    params = {"limit": limit, "offset": offset}
+    if action:
+        params["action"] = action
+    if resource_type:
+        params["resource_type"] = resource_type
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.get(f"{API_GATEWAY_URL}/admin/audit/logs", params=params, headers={"Authorization": authorization})
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=502, detail=f"API Gateway error: {e}")
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    return resp.json()
+
+
+@app.get("/api/admin/audit/stats")
+async def admin_audit_stats(authorization: str = Header(None), period: str = "today"):
+    """Proxy to gateway GET /admin/audit/stats."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        try:
+            resp = await client.get(f"{API_GATEWAY_URL}/admin/audit/stats", params={"period": period}, headers={"Authorization": authorization})
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=502, detail=f"API Gateway error: {e}")
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    return resp.json()
+
+
 @app.post("/api/consult")
 async def consult(file: UploadFile = File(...), authorization: str = Header(None)):
     """Proxy to API gateway /consult (skin-consulting-service)."""

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYRAA AI - Audit Logs & Statistics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; min-height: 100vh;
+            background: #4a0e36; background-image: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(139,69,100,0.4), transparent),
+            linear-gradient(180deg, #4a0e36 0%, #3d0c2e 100%); color: #f0e6d8; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(240,230,216,0.15); }
+        .header h1 { font-family: "Playfair Display", Georgia, serif; font-size: 1.5rem; margin: 0; }
+        .back-link { color: #e8c547; text-decoration: none; font-size: 0.85rem; }
+        .back-link:hover { text-decoration: underline; }
+        .auth-bar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+        .auth-bar input { padding: 0.5rem 0.8rem; border-radius: 6px; border: 1px solid rgba(240,230,216,0.2); background: rgba(255,255,255,0.08); color: #f0e6d8; font-size: 0.85rem; }
+        .auth-bar button { padding: 0.5rem 1rem; border-radius: 6px; border: none; background: #e8c547; color: #3d0c2e; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+        .auth-msg { font-size: 0.8rem; color: #e8c547; }
+        .tabs { display: flex; gap: 0.4rem; margin-bottom: 1.5rem; }
+        .tab { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(240,230,216,0.15); background: transparent; color: rgba(240,230,216,0.6); cursor: pointer; font-size: 0.85rem; }
+        .tab.active { background: #e8c547; color: #3d0c2e; border-color: #e8c547; font-weight: 600; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(240,230,216,0.1); border-radius: 10px; padding: 1.2rem; text-align: center; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #e8c547; }
+        .stat-label { font-size: 0.78rem; color: rgba(240,230,216,0.5); margin-top: 0.3rem; }
+        .period-selector { display: flex; gap: 0.3rem; margin-bottom: 1.5rem; }
+        .period-btn { padding: 0.35rem 0.7rem; border-radius: 6px; border: 1px solid rgba(240,230,216,0.15); background: transparent; color: rgba(240,230,216,0.5); cursor: pointer; font-size: 0.78rem; }
+        .period-btn.active { background: #e8c547; color: #3d0c2e; border-color: #e8c547; }
+        .breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .breakdown-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(240,230,216,0.1); border-radius: 10px; padding: 1rem; }
+        .breakdown-card h3 { font-size: 0.82rem; color: rgba(240,230,216,0.5); margin: 0 0 0.6rem 0; }
+        .breakdown-item { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(240,230,216,0.06); font-size: 0.8rem; }
+        .breakdown-item:last-child { border-bottom: none; }
+        .breakdown-key { color: rgba(240,230,216,0.7); }
+        .breakdown-val { color: #e8c547; font-weight: 600; }
+
+        .log-filters { display: flex; gap: 0.4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .log-filters select { padding: 0.45rem; border-radius: 6px; border: 1px solid rgba(240,230,216,0.15); background: rgba(255,255,255,0.08); color: #f0e6d8; font-size: 0.8rem; }
+        .log-filters button { padding: 0.45rem 0.8rem; border-radius: 6px; border: none; background: #e8c547; color: #3d0c2e; cursor: pointer; font-size: 0.8rem; font-weight: 600; }
+        .log-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .log-table th { text-align: left; padding: 0.6rem 0.4rem; border-bottom: 2px solid rgba(240,230,216,0.15); color: rgba(240,230,216,0.4); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; }
+        .log-table td { padding: 0.5rem 0.4rem; border-bottom: 1px solid rgba(240,230,216,0.06); color: rgba(240,230,216,0.7); vertical-align: top; }
+        .log-table tr:hover td { background: rgba(255,255,255,0.03); }
+        .action-badge { display: inline-block; padding: 0.12rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .action-badge.analysis { background: rgba(232,197,71,0.2); color: #e8c547; }
+        .action-badge.login { background: rgba(124,156,245,0.2); color: #7c9cf5; }
+        .action-badge.admin { background: rgba(245,124,124,0.2); color: #f57c7c; }
+        .action-badge.http { background: rgba(240,230,216,0.1); color: rgba(240,230,216,0.5); }
+        .details-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .details-cell:hover { white-space: normal; word-break: break-all; }
+        .timestamp { color: rgba(240,230,216,0.4); font-size: 0.72rem; white-space: nowrap; }
+        .pagination { display: flex; gap: 0.4rem; margin-top: 1rem; justify-content: center; }
+        .pagination button { padding: 0.35rem 0.7rem; border-radius: 6px; border: 1px solid rgba(240,230,216,0.15); background: transparent; color: rgba(240,230,216,0.5); cursor: pointer; font-size: 0.78rem; }
+        .pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .empty-state { text-align: center; padding: 3rem; color: rgba(240,230,216,0.3); }
+        @media (max-width: 768px) { .breakdown { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NYRAA AI - Audit Logs & Statistics</h1>
+            <a href="/" class="back-link">&larr; Back</a>
+        </div>
+
+        <div class="auth-bar" id="authBar">
+            <input type="text" id="adminUser" placeholder="Username" value="admin">
+            <input type="password" id="adminPass" placeholder="Password">
+            <button onclick="doLogin()">Login</button>
+            <span class="auth-msg" id="authMsg"></span>
+        </div>
+
+        <div id="mainContent" style="display:none">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('stats',this)">Statistics</button>
+                <button class="tab" onclick="switchTab('logs',this)">Audit Logs</button>
+            </div>
+
+            <div id="statsTab">
+                <div class="period-selector">
+                    <button class="period-btn active" onclick="loadStats('today',this)">Today</button>
+                    <button class="period-btn" onclick="loadStats('week',this)">Week</button>
+                    <button class="period-btn" onclick="loadStats('month',this)">Month</button>
+                </div>
+                <div class="stats-grid" id="statsGrid"></div>
+                <div class="breakdown" id="statsBreakdown"></div>
+            </div>
+
+            <div id="logsTab" style="display:none">
+                <div class="log-filters">
+                    <select id="actionFilter">
+                        <option value="">All Actions</option>
+                        <option value="ANALYSIS_COMPLETED">Analysis</option>
+                        <option value="LOGIN">Login</option>
+                        <option value="ADMIN_VIEW_LOGS">Admin View</option>
+                        <option value="ANALYSIS_DELETED">Deleted</option>
+                        <option value="HTTP_REQUEST">HTTP Request</option>
+                    </select>
+                    <select id="limitFilter"><option value="50">50</option><option value="100" selected>100</option></select>
+                    <button onclick="loadLogs()">Refresh</button>
+                </div>
+                <div id="logsContainer"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let token = sessionStorage.getItem('nyraa_token') || '';
+    let offset = 0;
+
+    if (token) { document.getElementById('authBar').style.display='none'; document.getElementById('mainContent').style.display=''; loadStats('today'); }
+
+    async function doLogin() {
+        const u = document.getElementById('adminUser').value;
+        const p = document.getElementById('adminPass').value;
+        try {
+            const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p}) });
+            if (!r.ok) { document.getElementById('authMsg').textContent = 'Invalid credentials'; return; }
+            const d = await r.json();
+            token = 'Bearer ' + d.access_token;
+            sessionStorage.setItem('nyraa_token', token);
+            document.getElementById('authBar').style.display='none';
+            document.getElementById('mainContent').style.display='';
+            loadStats('today');
+        } catch(e) { document.getElementById('authMsg').textContent = 'Login failed'; }
+    }
+
+    function switchTab(tab, el) {
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('statsTab').style.display = tab==='stats'?'':'none';
+        document.getElementById('logsTab').style.display = tab==='logs'?'':'none';
+        if (tab==='logs') loadLogs();
+    }
+
+    async function loadStats(period, el) {
+        if (el) { document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
+        try {
+            const r = await fetch(`/api/admin/audit/stats?period=${period}`, {headers:{Authorization:token}});
+            if (r.status===401) { sessionStorage.removeItem('nyraa_token'); location.reload(); return; }
+            const d = await r.json(); renderStats(d);
+        } catch(e) { document.getElementById('statsGrid').innerHTML='<div class="empty-state">Failed to load</div>'; }
+    }
+
+    function renderStats(d) {
+        const ba = d.by_action||{};
+        const analyses = ba['ANALYSIS_COMPLETED']||0;
+        const logins = (ba['LOGIN_SUCCESS']||0)+(ba['LOGIN_FAILED']||0);
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><div class="stat-value">${d.total_events||0}</div><div class="stat-label">Total Events</div></div>
+            <div class="stat-card"><div class="stat-value">${analyses}</div><div class="stat-label">Analyses</div></div>
+            <div class="stat-card"><div class="stat-value">${logins}</div><div class="stat-label">Login Attempts</div></div>
+            <div class="stat-card"><div class="stat-value">${ba['HTTP_REQUEST']||0}</div><div class="stat-label">HTTP Requests</div></div>`;
+        let ah='', rh='';
+        for (const [k,v] of Object.entries(ba)) ah+=`<div class="breakdown-item"><span class="breakdown-key">${k}</span><span class="breakdown-val">${v}</span></div>`;
+        for (const [k,v] of Object.entries(d.by_resource_type||{})) rh+=`<div class="breakdown-item"><span class="breakdown-key">${k}</span><span class="breakdown-val">${v}</span></div>`;
+        document.getElementById('statsBreakdown').innerHTML=`
+            <div class="breakdown-card"><h3>By Action</h3>${ah||'<div class="empty-state">No data</div>'}</div>
+            <div class="breakdown-card"><h3>By Resource Type</h3>${rh||'<div class="empty-state">No data</div>'}</div>`;
+    }
+
+    async function loadLogs(off=0) {
+        offset=off;
+        const action=document.getElementById('actionFilter').value;
+        const limit=document.getElementById('limitFilter').value;
+        let url=`/api/admin/audit/logs?limit=${limit}&offset=${off}`;
+        if(action) url+=`&action=${action}`;
+        try {
+            const r=await fetch(url,{headers:{Authorization:token}});
+            if(r.status===401){sessionStorage.removeItem('nyraa_token');location.reload();return;}
+            const logs=await r.json(); renderLogs(logs,parseInt(limit));
+        } catch(e) { document.getElementById('logsContainer').innerHTML='<div class="empty-state">Failed to load</div>'; }
+    }
+
+    function badge(a) {
+        if(a.includes('ANALYSIS')) return 'analysis';
+        if(a.includes('LOGIN')) return 'login';
+        if(a.includes('ADMIN')||a.includes('DELETE')) return 'admin';
+        return 'http';
+    }
+    function fmtTime(ts) { if(!ts) return '-'; return new Date(ts).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',hour12:false}); }
+    function fmtDetails(d) {
+        if(!d) return '-';
+        if(typeof d==='string') try{d=JSON.parse(d);}catch{return d;}
+        if(d.skin_type) return `Skin:${d.skin_type} Face:${d.face_shape||'?'}`;
+        if(d.deleted_ids) return `Deleted: ${d.deleted_ids.join(',')}`;
+        return JSON.stringify(d).slice(0,100);
+    }
+    function renderLogs(logs,limit) {
+        const c=document.getElementById('logsContainer');
+        if(!logs.length){c.innerHTML='<div class="empty-state">No logs found</div>';document.getElementById('pagination').innerHTML='';return;}
+        let rows=logs.map(l=>`<tr>
+            <td class="timestamp">${fmtTime(l.created_at)}</td>
+            <td><span class="action-badge ${badge(l.action)}">${l.action}</span></td>
+            <td>${l.resource_type||'-'}</td>
+            <td>${l.user_id||'-'}</td>
+            <td>${l.ip_address||'-'}</td>
+            <td class="details-cell" title="${(JSON.stringify(l.details)||'').replace(/"/g,'&quot;')}">${fmtDetails(l.details)}</td>
+        </tr>`).join('');
+        c.innerHTML=`<table class="log-table"><thead><tr><th>Time</th><th>Action</th><th>Resource</th><th>User</th><th>IP</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table>`;
+        document.getElementById('pagination').innerHTML=`
+            <button onclick="loadLogs(${offset-limit})" ${offset<=0?'disabled':''}>&#8592; Prev</button>
+            <button disabled>${offset+1}-${offset+logs.length}</button>
+            <button onclick="loadLogs(${offset+limit})" ${logs.length<limit?'disabled':''}>Next &#8594;</button>`;
+    }
+    </script>
+</body>
+</html>
