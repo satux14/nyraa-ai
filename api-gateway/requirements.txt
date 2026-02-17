@@ -6,4 +6,7 @@ python-multipart
 numpy
 opencv-python-headless
 PyJWT
+sqlalchemy
+psycopg2-binary
+srs-audit-lib[fastapi] @ git+https://github.com/satux14/srs-audit-lib.git
 

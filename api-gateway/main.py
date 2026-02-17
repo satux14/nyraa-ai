@@ -8,12 +8,16 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import jwt
-from fastapi import FastAPI, UploadFile, File, Form, Body, HTTPException, Depends
+from fastapi import FastAPI, Request, UploadFile, File, Form, Body, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse, FileResponse
 import asyncpg
 import numpy as np
 import cv2
+from sqlalchemy import create_engine
+
+from srs_audit import init_audit
+from srs_audit.fastapi import AuditMiddleware, metrics_route
 
 
 FACE_SERVICE_URL = os.getenv("FACE_SERVICE_URL", "http://face-service:8001/detect-face")
@@ -43,7 +47,21 @@ JWT_EXPIRE_HOURS = 24
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/uploads")
 IST = ZoneInfo("Asia/Kolkata")
 
+audit_db_engine = create_engine(
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+audit_logger = init_audit(service_name="nyraa-ai", db_engine=audit_db_engine, version="1.0.0")
+
 app = FastAPI(title="NYRAA AI API Gateway", version="1.0.0")
+
+app.add_middleware(
+    AuditMiddleware,
+    service_name="nyraa-ai",
+    db_engine=audit_db_engine,
+    version="1.0.0",
+)
+app.include_router(metrics_route)
+
 security = HTTPBearer(auto_error=False)
 
 db_pool: asyncpg.pool.Pool | None = None
@@ -131,15 +149,20 @@ async def call_service(
     method: str = "POST",
     files: Dict[str, Any] | None = None,
     json: Dict[str, Any] | None = None,
+    correlation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     timeout = httpx.Timeout(20.0, connect=5.0)
+    headers = {}
+    if correlation_id:
+        headers["X-Correlation-ID"] = correlation_id
     async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             if method.upper() == "POST":
-                resp = await client.post(url, files=files, json=json)
+                resp = await client.post(url, files=files, json=json, headers=headers)
             else:
-                resp = await client.get(url, params=json)
+                resp = await client.get(url, params=json, headers=headers)
         except httpx.RequestError as exc:
+            audit_logger.track_error("service_call_failed", details={"url": url, "error": str(exc)})
             raise HTTPException(
                 status_code=502,
                 detail=f"Error contacting service at {url}: {exc}",
@@ -215,21 +238,25 @@ def _compute_dark_circle_score(image: np.ndarray, landmarks: List[Dict[str, floa
 
 
 @app.post("/login")
-async def login(body: Dict[str, Any] = Body(...)):
+async def login(request: Request, body: Dict[str, Any] = Body(...)):
     role = body.get("role")
     if role == "guest":
+        audit_logger.track_login(username="guest", success=True, request=request)
         return {"access_token": _create_token("guest"), "role": "guest"}
     username = body.get("username")
     password = body.get("password")
     if not username or not password:
         raise HTTPException(status_code=400, detail="Username and password required for admin")
     if username != ADMIN_USER or password != ADMIN_PASSWORD:
+        audit_logger.track_login(username=username, success=False, request=request)
         raise HTTPException(status_code=401, detail="Invalid admin credentials")
+    audit_logger.track_login(username=username, success=True, request=request)
     return {"access_token": _create_token("admin"), "role": "admin"}
 
 
 @app.post("/analyze")
 async def analyze(
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user),
     file: UploadFile = File(...),
     customer_name: Optional[str] = Form(None),
@@ -238,12 +265,13 @@ async def analyze(
     if not contents:
         raise HTTPException(status_code=400, detail="Empty file uploaded")
 
+    correlation_id = getattr(request.state, "correlation_id", None)
     filename = getattr(file, "filename", "image.jpg") or "image.jpg"
     content_type = file.content_type or "image/jpeg"
 
     file_tuple = (filename, contents, content_type)
 
-    face = await call_service(FACE_SERVICE_URL, files={"file": file_tuple})
+    face = await call_service(FACE_SERVICE_URL, files={"file": file_tuple}, correlation_id=correlation_id)
 
     if not face.get("face_detected"):
         raise HTTPException(
@@ -264,11 +292,12 @@ async def analyze(
         cropped_bytes = contents
     cropped_tuple = ("face_crop.jpg", cropped_bytes, "image/jpeg")
 
-    skin = await call_service(SKIN_SERVICE_URL, files={"file": cropped_tuple})
+    skin = await call_service(SKIN_SERVICE_URL, files={"file": cropped_tuple}, correlation_id=correlation_id)
 
     shape = await call_service(
         SHAPE_SERVICE_URL,
         json={"landmarks": landmarks},
+        correlation_id=correlation_id,
     )
 
     dark_circle_score = "Low"
@@ -288,6 +317,7 @@ async def analyze(
     rec = await call_service(
         RECOMMENDATION_SERVICE_URL,
         json=combined,
+        correlation_id=correlation_id,
     )
 
     response = {
@@ -297,10 +327,9 @@ async def analyze(
         "landmarks": landmarks,
     }
 
-    # Call skin-consulting service and store result for history (same DB / analysis_result).
     staff_url = f"{SKIN_CONSULTING_SERVICE_URL.rstrip('/')}/consult-staff"
     try:
-        staff = await call_service(staff_url, files={"file": file_tuple})
+        staff = await call_service(staff_url, files={"file": file_tuple}, correlation_id=correlation_id)
         response["skin_consult"] = staff
     except Exception:
         response["skin_consult"] = {"face_detected": False}
@@ -347,6 +376,20 @@ async def analyze(
         except Exception:
             pass
 
+    audit_logger.audit(
+        action="ANALYSIS_COMPLETED",
+        resource_type="analysis",
+        details={
+            "user_type": user_type,
+            "customer_name": cust_name,
+            "skin_type": combined.get("skin_type"),
+            "face_shape": combined.get("face_shape"),
+        },
+        request=request,
+        correlation_id=correlation_id,
+    )
+    audit_logger.track_interaction("skin_analysis", request=request)
+
     return response
 
 
@@ -372,8 +415,9 @@ async def serve_upload(path: str):
 
 
 @app.get("/admin/analyses")
-async def admin_analyses(current_user: Dict[str, Any] = Depends(get_admin_user)):
+async def admin_analyses(request: Request, current_user: Dict[str, Any] = Depends(get_admin_user)):
     """Return all analysis logs (admin only). created_at in IST."""
+    audit_logger.audit(action="ADMIN_VIEW_LOGS", resource_type="admin", request=request)
     if db_pool is None:
         return []
     try:
@@ -408,6 +452,7 @@ async def admin_analyses(current_user: Dict[str, Any] = Depends(get_admin_user))
 
 @app.post("/admin/analyses/delete")
 async def admin_delete_analyses(
+    request: Request,
     body: Dict[str, Any],
     current_user: Dict[str, Any] = Depends(get_admin_user),
 ):
@@ -438,6 +483,12 @@ async def admin_delete_analyses(
                 "DELETE FROM analysis_logs WHERE id = ANY($1::bigint[])",
                 ids,
             )
+        audit_logger.audit(
+            action="ANALYSIS_DELETED",
+            resource_type="admin",
+            details={"deleted_ids": ids},
+            request=request,
+        )
         return {"deleted": len(ids)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
